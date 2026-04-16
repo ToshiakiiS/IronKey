@@ -28,6 +28,10 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -37,7 +41,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -76,7 +79,7 @@ fun IronKeyForm(modifier: Modifier = Modifier) {
 
     val context = LocalContext.current
     var generatedPassword by remember { mutableStateOf("") }
-    var maxChacarcters by remember { mutableStateOf(8) }
+    var MaxCharacters by remember { mutableStateOf(8) }
     var passwordType by remember { mutableStateOf(PasswordType.PIN) }
     var isEditable by remember { mutableStateOf(false) }
 // Checkboxes
@@ -88,6 +91,7 @@ fun IronKeyForm(modifier: Modifier = Modifier) {
         mutableStateOf(true) }
     var includeSymbols by rememberSaveable {
         mutableStateOf(false) }
+    var passwordComplexity by remember { mutableStateOf(PasswordComplexity.MEDIUM) }
 
 
     Column(
@@ -131,7 +135,7 @@ fun IronKeyForm(modifier: Modifier = Modifier) {
                 OutlinedTextField(
                     value = generatedPassword,
                     onValueChange = { newPassword ->
-                        if (newPassword.length <= maxChacarcters)
+                        if (newPassword.length <= MaxCharacters)
                             generatedPassword = newPassword
                     },
                     enabled = isEditable,
@@ -157,7 +161,7 @@ fun IronKeyForm(modifier: Modifier = Modifier) {
                 )
 
                 Text(
-                    "${generatedPassword.length} / $maxChacarcters",
+                    "${generatedPassword.length} / $MaxCharacters",
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier
                         .align(Alignment.End)
@@ -174,7 +178,8 @@ fun IronKeyForm(modifier: Modifier = Modifier) {
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier
+                            .weight(1f)
                             .clickable { passwordType = PasswordType.PIN }
                     ) {
                         RadioButton(
@@ -185,7 +190,8 @@ fun IronKeyForm(modifier: Modifier = Modifier) {
                     }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier
+                            .weight(1f)
                             .clickable { passwordType = PasswordType.STANDARD }
                     ) {
                         RadioButton(
@@ -221,73 +227,88 @@ fun IronKeyForm(modifier: Modifier = Modifier) {
 
                 Spacer(modifier = Modifier.height(20.dp))
 
+
                 if(isEditable) {
-                    Text("Tamanho da Senha ${maxChacarcters}")
-                    Slider(
-                        value = maxChacarcters.toFloat(),
-                        onValueChange = {maxChacarcters = it.toInt()},
-                        valueRange = 4.toFloat() .. 12.toFloat(),
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Text("Complexidade da senha")
+                    PasswordComplexityDropdown(selectedComplexity = passwordComplexity) {
+                        passwordComplexity = it
+                        MaxCharacters = (passwordComplexity.maxLength + passwordComplexity.minLength)/2
 
-                    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment
-                    = Alignment.CenterVertically) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Checkbox(
-                                checked = includeUppercase,
-                                onCheckedChange = { includeUppercase = it }
-                            )
-                            Text("Maiúsculas")
+                    }
+                    if (passwordType == PasswordType.STANDARD) {
+                        Text("Tamanho da Senha ${MaxCharacters}")
+                        Slider(
+                            value = MaxCharacters.toFloat(),
+                            onValueChange = {MaxCharacters = it.toInt()},
+                            valueRange = passwordComplexity.minLength.toFloat() .. passwordComplexity.maxLength.toFloat(),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment
+                        = Alignment.CenterVertically) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { includeUppercase = !includeUppercase }
+                            ) {
+                                Checkbox(
+                                    checked = includeUppercase,
+                                    onCheckedChange = { includeUppercase = it }
+                                )
+                                Text("Maiúsculas")
+                            }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { includeLowercase = !includeLowercase }
+                            ) {
+                                Checkbox(
+                                    checked = includeLowercase,
+                                    onCheckedChange = { includeLowercase = it }
+                                )
+                                Text("Minúsculas")
+                            }
                         }
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.weight(1f)
+                        Row(modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Checkbox(
-                                checked = includeLowercase,
-                                onCheckedChange = { includeLowercase = it }
-                            )
-                            Text("Minúsculas")
+                            Row(verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { includeNumbers = !includeNumbers }
+                            ) {
+                                Checkbox(checked = includeNumbers,
+                                    onCheckedChange = { includeNumbers = it }
+                                )
+                                Text("Números")
+                            }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { includeSymbols = !includeSymbols }
+                            ) {
+                                Checkbox(
+                                    checked = includeSymbols,
+                                    onCheckedChange = { includeSymbols = it }
+                                )
+                                Text("Símbolos")
+                            }
                         }
                     }
-                    Row(modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Checkbox(checked = includeNumbers,
-                                onCheckedChange = { includeNumbers = it }
-                            )
-                            Text("Números")
-                        }
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Checkbox(
-                                checked = includeSymbols,
-                                onCheckedChange = { includeSymbols = it }
-                            )
-                            Text("Símbolos")
-                        }
-                    }
+
                 }
-
-
-
                 Button(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = {
                         val generator : PasswordGenerator = if (passwordType == PasswordType.PIN) {
                             PinPasswordGenerator()
                         } else StandardPasswordGenerator()
-                        generatedPassword = generator.generate(maxChacarcters)
+                        generatedPassword = generator.generate(MaxCharacters)
                     }
                 ) { Text("Gerar Senha") }
 
@@ -321,6 +342,16 @@ enum class PasswordType {
     STANDARD
 }
 
+enum class PasswordComplexity(
+    val title: String,
+    val minLength: Int,
+    val maxLength: Int
+) {
+    LOW("Baixa", 4, 6),
+    MEDIUM("Média", 4, 10),
+    HIGH("Alta", 4, 16)
+}
+
 interface PasswordGenerator {
     fun generate(length: Int): String
 }
@@ -352,4 +383,45 @@ class StandardPasswordGenerator(
             .map { chars.random() }
             .joinToString("")
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PasswordComplexityDropdown(
+    selectedComplexity: PasswordComplexity,
+    onComplexitySelected: (PasswordComplexity) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Spacer(modifier = Modifier.height(20.dp))
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
+    ) {
+        OutlinedTextField(
+            value = selectedComplexity.title,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Complexidade da senha") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded)},
+            modifier = Modifier.fillMaxWidth().menuAnchor()
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            PasswordComplexity.entries.forEach { complexity ->
+                DropdownMenuItem(
+                    text = { Text(complexity.title) },
+                    onClick = {
+                        onComplexitySelected(complexity)
+                        expanded = false
+                    }
+                )
+            }
+        }
+
+
+    }
+    
 }
